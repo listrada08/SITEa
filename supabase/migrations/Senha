@@ -1,0 +1,66 @@
+
+-- Create a table for user notification preferences
+CREATE TABLE public.user_notification_preferences (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users NOT NULL,
+  general_notifications BOOLEAN NOT NULL DEFAULT true,
+  email_notifications BOOLEAN NOT NULL DEFAULT false,
+  push_notifications BOOLEAN NOT NULL DEFAULT true,
+  auto_refresh BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Add Row Level Security (RLS)
+ALTER TABLE public.user_notification_preferences ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for users to manage their own notification preferences
+CREATE POLICY "Users can view their own notification preferences" 
+  ON public.user_notification_preferences 
+  FOR SELECT 
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create their own notification preferences" 
+  ON public.user_notification_preferences 
+  FOR INSERT 
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own notification preferences" 
+  ON public.user_notification_preferences 
+  FOR UPDATE 
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own notification preferences" 
+  ON public.user_notification_preferences 
+  FOR DELETE 
+  USING (auth.uid() = user_id);
+
+-- Create function to handle new user notification preferences
+CREATE OR REPLACE FUNCTION public.handle_new_user_notification_preferences()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = ''
+AS $$
+BEGIN
+  INSERT INTO public.user_notification_preferences (
+    user_id,
+    general_notifications,
+    email_notifications,
+    push_notifications,
+    auto_refresh
+  )
+  VALUES (
+    NEW.id,
+    true,
+    true, -- Default to true so users receive email notifications about updates
+    true,
+    true
+  );
+  RETURN NEW;
+END;
+$$;
+
+-- Create trigger to automatically create notification preferences when a user signs up
+CREATE TRIGGER on_auth_user_created_notification_preferences
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user_notification_preferences();
