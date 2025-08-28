@@ -5,11 +5,6 @@ import { Plus, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { validateStock, searchStocks } from '../utils/stockValidation';
 
-interface AddAssetDialogProps {
-  onAssetAdded?: (asset: any) => void;
-  onBalanceUpdate?: (amount: number) => void;
-}
-
 const AddAssetDialog = ({ onAssetAdded, onBalanceUpdate }: AddAssetDialogProps) => {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
